@@ -432,24 +432,44 @@
 
         function togglePrimarySidebarPanel(panelType) {
             closeAllDropdowns();
+
+            // 情况1: 如果尝试打开 'explorer' 面板，但R2会话未激活，则显示密码模态框
+            if (panelType === 'explorer' && !r2SessionActive) {
+                r2PasswordModal.style.display = 'flex';
+                // 如果 r2PasswordInput 是通过 getElementById 获取的，确保它已定义
+                const r2PassInputElem = document.getElementById('r2-password-input');
+                if (r2PassInputElem) r2PassInputElem.focus();
+                
+                setActiveIcon(activityExplorerIcon); // 将文件浏览器图标设为激活（或待定）状态
+                currentOpenPanel = 'explorer'; // 记录意图打开的是 'explorer'
+                primarySidebarPanel.classList.remove('visible'); // 确保主侧边栏面板此时是隐藏的
+                return; // 等待密码提交，不继续执行后续的面板打开逻辑
+            }
+
+            // 情况2: 如果点击的面板图标对应的面板已经打开且可见，则关闭它
             if (currentOpenPanel === panelType && primarySidebarPanel.classList.contains('visible')) {
                 primarySidebarPanel.classList.remove('visible');
-                setActiveIcon(null);
+                setActiveIcon(null); // 清除激活的图标
                 currentOpenPanel = null;
-            } else {
-                primarySidebarPanel.innerHTML = ''; // Clear previous content
-                if (panelType === 'explorer') {
-                    primarySidebarPanel.appendChild(buildR2ExplorerDOM());
-                    if (r2SessionActive) fetchR2Files(); else renderR2FileList(); // Render empty/login prompt
-                    setActiveIcon(activityExplorerIcon);
-                } else if (panelType === 'settings') {
-                    primarySidebarPanel.appendChild(buildSettingsDOM());
-                    setActiveIcon(activitySettingsIcon);
-                }
-                primarySidebarPanel.classList.add('visible');
-                currentOpenPanel = panelType;
+                return;
             }
+
+            // 情况3: 打开新面板或切换到不同面板 (此时如果panelType是'explorer'，则r2SessionActive必然为true)
+            primarySidebarPanel.innerHTML = ''; // 清空主侧边栏面板的先前内容
+
+            if (panelType === 'explorer') { // 此时 r2SessionActive 肯定是 true
+                primarySidebarPanel.appendChild(buildR2ExplorerDOM());
+                fetchR2Files(); // 因为会话已激活，直接获取文件
+                setActiveIcon(activityExplorerIcon);
+            } else if (panelType === 'settings') {
+                primarySidebarPanel.appendChild(buildSettingsDOM());
+                setActiveIcon(activitySettingsIcon);
+            }
+            
+            primarySidebarPanel.classList.add('visible');
+            currentOpenPanel = panelType;
         }
+
 
         function buildR2ExplorerDOM() {
             const explorerFragment = document.createDocumentFragment();
@@ -684,23 +704,61 @@
         }
 
         // --- R2 and File Handling (Adapted from previous versions) ---
-        function handleR2PasswordSubmit() { /* ... unchanged ... */
-            const password = document.getElementById('r2-password-input').value;
-            if (!password) { showMessage("请输入密码。"); return; }
+        async function handleR2PasswordSubmit() {
+            // 如果 r2PasswordInput 是全局变量，则直接使用。否则通过 getElementById 获取。
+            const r2PassInputElem = document.getElementById('r2-password-input');
+            const password = r2PassInputElem ? r2PassInputElem.value : '';
+
+            if (!password) {
+                showMessage("请输入密码。");
+                return;
+            }
+
             showMessage("正在连接到R2...", 5000);
-            fetch(`${API_BASE}/auth`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        r2SessionActive = true; showMessage("R2 连接成功！"); r2PasswordModal.style.display = 'none';
-                        document.getElementById('r2-password-input').value = '';
-                        if (currentOpenPanel === 'explorer') fetchR2Files(); // Refresh if explorer is open
-                        else togglePrimarySidebarPanel('explorer'); // Open explorer
-                        updateR2SaveButtonState();
-                    } else {
-                        showMessage(`认证失败: ${data.error || '未知错误'}`); r2SessionActive = false; updateR2SaveButtonState();
+            try {
+                const response = await fetch(`${API_BASE}/auth`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    r2SessionActive = true;
+                    showMessage("R2 连接成功！");
+                    r2PasswordModal.style.display = 'none';
+                    if (r2PassInputElem) r2PassInputElem.value = '';
+                    updateR2SaveButtonState();
+
+                    // 如果之前意图打开的是 'explorer' 面板（因等待认证而暂停）
+                    if (currentOpenPanel === 'explorer') {
+                        primarySidebarPanel.innerHTML = ''; // 清空可能存在的 "未连接" 提示
+                        primarySidebarPanel.appendChild(buildR2ExplorerDOM());
+                        primarySidebarPanel.classList.add('visible');
+                        fetchR2Files(); // 获取文件
+                        setActiveIcon(activityExplorerIcon); // 确保图标是激活的
                     }
-                }).catch(error => { showMessage(`连接错误: ${error.message}`); r2SessionActive = false; updateR2SaveButtonState(); });
+                } else {
+                    showMessage(`认证失败: ${data.error || '未知错误'}`);
+                    r2SessionActive = false; // 明确设置会话为非激活
+                    updateR2SaveButtonState();
+                    // 如果之前意图打开 'explorer' 但认证失败，则保持面板关闭且图标不激活
+                    if (currentOpenPanel === 'explorer') {
+                       primarySidebarPanel.classList.remove('visible'); // 确保面板是隐藏的
+                       setActiveIcon(null);
+                       currentOpenPanel = null; // 重置意图状态
+                    }
+                }
+            } catch (error) {
+                showMessage(`连接错误: ${error.message}`);
+                r2SessionActive = false;
+                updateR2SaveButtonState();
+                if (currentOpenPanel === 'explorer') {
+                    primarySidebarPanel.classList.remove('visible');
+                    setActiveIcon(null);
+                    currentOpenPanel = null;
+                }
+            }
         }
 
         function fetchR2Files() { /* ... get r2-file-list-sidebar ... */
