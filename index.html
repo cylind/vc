@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monaco 在线编辑器 - R2 集成</title>
+    <title>Monaco 在线编辑器 - 高级版</title>
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.47.0/min/vs/editor/editor.main.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,29 +13,25 @@
         .menu-item-group { position: relative; }
         .menu-button { padding: 0.25rem 0.75rem; cursor: pointer; border-radius: 0.25rem; background: none; border: none; color: #cccccc; font-size: 0.875rem; }
         .menu-button:hover { background-color: #505050; }
-        .dropdown-content { display: none; position: absolute; top: 100%; left: 0; background-color: #252526; min-width: 180px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 100; border: 1px solid #3c3c3c; border-radius: 0.25rem; padding: 0.25rem 0; }
-        .dropdown-content button { color: #cccccc; padding: 0.5rem 1rem; text-decoration: none; display: block; width: 100%; text-align: left; background: none; border: none; font-size: 0.875rem; cursor: pointer; }
-        .dropdown-content button:hover { background-color: #007acc; color: white; }
+        .dropdown-content { display: none; position: absolute; top: 100%; left: 0; background-color: #252526; min-width: 180px; max-width: 280px; max-height: 300px; overflow-y: auto; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2); z-index: 1001; border: 1px solid #1e1e1e; border-radius: 0.25rem; padding: 0.25rem 0; }
+        .dropdown-content button, .dropdown-content .dropdown-item { color: #cccccc; padding: 0.5rem 1rem; text-decoration: none; display: block; width: 100%; text-align: left; background: none; border: none; font-size: 0.875rem; cursor: pointer; }
+        .dropdown-content button:hover, .dropdown-content .dropdown-item:hover { background-color: #007acc; color: white; }
         .dropdown-content button.disabled { color: #666; cursor: not-allowed; }
         .dropdown-content button.disabled:hover { background-color: #252526; }
         .dropdown-content .separator { height: 1px; background-color: #3c3c3c; margin: 0.25rem 0; }
-        .top-menu-bar .controls-container { display: flex; align-items: center; margin-left: auto; gap: 0.75rem; }
-        .controls-container label { font-weight: 400; color: #cccccc; }
-        .controls-container select { padding: 0.25rem 0.5rem; border-radius: 0.25rem; border: 1px solid #505050; background-color: #3c3c3c; color: #cccccc; font-size: 0.875rem; cursor: pointer; }
-        .controls-container select:hover { border-color: #686868; background-color: #505050; }
+        /* Controls container removed from top bar */
 
         .main-content { display: flex; flex-grow: 1; overflow: hidden; }
-        /* Activity Bar */
-        .activity-bar { width: 50px; background-color: #333333; padding: 0.5rem 0; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; border-right: 1px solid #252526; flex-shrink: 0; }
+        .activity-bar { width: 50px; background-color: #333333; padding: 0.5rem 0; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; border-right: 1px solid #252526; flex-shrink: 0; justify-content: space-between; }
+        .activity-bar .top-icons, .activity-bar .bottom-icons { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; width:100%; }
         .activity-bar .icon { width: 32px; height: 32px; border-radius: 0.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #cccccc; }
         .activity-bar .icon:hover { background-color: #505050; }
-        .activity-bar .icon.active { background-color: #007acc; }
+        .activity-bar .icon.active { background-color: #007acc; color: white; }
         .activity-bar .icon svg { width: 20px; height: 20px; fill: currentColor; }
 
-        /* Primary Side Bar (for File Explorer) */
-        .primary-side-bar { width: 250px; background-color: #252526; border-right: 1px solid #1e1e1e; display: none; /* Hidden by default */ flex-direction: column; padding: 0.5rem; overflow-y: auto; }
+        .primary-side-bar { width: 280px; background-color: #252526; border-right: 1px solid #1e1e1e; display: none; flex-direction: column; padding: 0.5rem; overflow-y: auto; }
         .primary-side-bar.visible { display: flex; }
-        .primary-side-bar h3 { margin: 0 0 0.5rem 0.25rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #ccc; }
+        .primary-side-bar h3 { margin: 0.5rem 0.25rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; color: #ccc; }
         .file-list { list-style: none; padding: 0; margin: 0; }
         .file-list li { padding: 0.35rem 0.5rem; cursor: pointer; border-radius: 0.25rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
         .file-list li:hover { background-color: #37373d; }
@@ -43,27 +39,47 @@
         .file-item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
         .file-item-actions button { background: none; border: none; color: #ccc; cursor: pointer; padding: 2px 4px; font-size: 0.9em; }
         .file-item-actions button:hover { color: #fff; }
-        .r2-controls { margin-bottom: 0.5rem; display: flex; gap: 0.5rem; }
-        .r2-controls button { background-color: #007acc; color: white; border: none; padding: 0.3rem 0.6rem; font-size: 0.8rem; border-radius: 3px; cursor: pointer; }
-        .r2-controls button:hover { background-color: #005a9e; }
+        .r2-controls, .settings-controls { margin-bottom: 0.5rem; display: flex; gap: 0.5rem; }
+        .r2-controls button, .settings-controls button { background-color: #007acc; color: white; border: none; padding: 0.3rem 0.6rem; font-size: 0.8rem; border-radius: 3px; cursor: pointer; }
+        .r2-controls button:hover, .settings-controls button:hover { background-color: #005a9e; }
+
+        /* Settings Panel Specifics */
+        .settings-group { margin-bottom: 1rem; padding: 0.5rem; border: 1px solid #333; border-radius: 4px;}
+        .settings-group label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; color: #aaa; }
+        .settings-group select, .settings-group input[type="number"] {
+            width: 100%; padding: 0.4rem; border-radius: 3px; border: 1px solid #505050;
+            background-color: #3c3c3c; color: #cccccc; font-size: 0.875rem;
+        }
+         .settings-group input[type="checkbox"] { margin-right: 0.5rem; }
 
 
         .editor-area { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         #editor-container { flex-grow: 1; border: none; }
 
-        .bottom-status-bar { background-color: #007acc; color: #ffffff; padding: 0 1rem; height: 22px; display: flex; align-items: center; font-size: 0.75rem; flex-shrink: 0; gap: 1rem; }
-        .bottom-status-bar .status-item { cursor: default; }
-        .bottom-status-bar .status-item:hover { background-color: rgba(255,255,255,0.1); border-radius:0.25rem; padding: 0 0.25rem; }
+        .bottom-status-bar { background-color: #007acc; color: #ffffff; padding: 0 0.5rem; height: 22px; display: flex; align-items: center; font-size: 0.75rem; flex-shrink: 0; justify-content: flex-end; /* Align items to the right */ }
+        .status-item { padding: 0 0.5rem; cursor: pointer; height: 100%; display: flex; align-items: center; }
+        .status-item:hover { background-color: rgba(255,255,255,0.12); }
+        .status-item.no-hover:hover { background-color: transparent; cursor: default; }
+        .status-item-dropdown { /* Same as .dropdown-content but positioned from bottom */
+            display: none; position: absolute; bottom: 22px; /* Height of status bar */ right: 0; /* Will be adjusted by JS */
+            background-color: #252526; min-width: 160px; max-width: 250px; max-height: 200px; overflow-y: auto;
+            box-shadow: 0px -4px 10px 0px rgba(0,0,0,0.2); z-index: 1001;
+            border: 1px solid #1e1e1e; border-radius: 0.25rem 0.25rem 0 0; padding: 0.25rem 0;
+        }
+        .status-item-dropdown .dropdown-item:hover { background-color: #007acc; color: white; }
+
 
         #message-box, .modal-overlay { position: fixed; z-index: 1000; }
         #message-box { top: 40px; left: 50%; transform: translateX(-50%); background-color: #252526; color: #cccccc; padding: 0.75rem 1.25rem; border-radius: 0.375rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); opacity: 0; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; visibility: hidden; font-size: 0.875rem; }
         #message-box.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 
-        .modal-overlay { display: none; /* Hidden by default */ left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; }
+        .modal-overlay { display: none; /* Hidden by default */ left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .modal-content { background-color: #2d2d2d; padding: 20px; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); color: #cccccc; min-width: 300px; max-width: 400px; }
         .modal-content h2 { margin-top: 0; color: #0098ff; }
         .modal-content label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; }
         .modal-content input[type="password"], .modal-content input[type="text"], .modal-content input[type="number"] { width: calc(100% - 22px); padding: 8px 10px; margin-bottom: 10px; border-radius: 3px; border: 1px solid #555; background-color: #3c3c3c; color: #ccc; }
+        .modal-content .checkbox-group { display: flex; align-items: center; margin-bottom: 10px; }
+        .modal-content .checkbox-group input[type="checkbox"] { width: auto; margin-right: 8px; }
         .modal-content button { padding: 8px 15px; margin-top: 10px; border: none; border-radius: 3px; cursor: pointer; background-color: #007acc; color: white; }
         .modal-content button.cancel { background-color: #555; margin-left: 10px; }
     </style>
@@ -117,43 +133,51 @@
                     <button id="help-about">关于</button>
                 </div>
             </div>
-
-            <div class="controls-container">
-                <div><label for="language-select">语言:</label><select id="language-select"></select></div>
-                <div><label for="theme-select">主题:</label><select id="theme-select"></select></div>
             </div>
-        </div>
 
         <div class="main-content">
             <div class="activity-bar">
-                <div class="icon" id="activity-explorer" title="文件浏览器 (R2)">
-                    <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"></path></svg>
+                <div class="top-icons">
+                    <div class="icon" id="activity-explorer" title="文件浏览器 (R2)">
+                        <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"></path></svg>
+                    </div>
+                    <div class="icon" id="activity-search" title="查找">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5A6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+                    </div>
                 </div>
-                <div class="icon" id="activity-search" title="Search">
-                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5A6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+                <div class="bottom-icons">
+                    <div class="icon" id="activity-settings" title="设置">
+                        <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22.07-.49.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"></path></svg>
+                    </div>
                 </div>
             </div>
-            <div class="primary-side-bar" id="r2-file-explorer-panel">
-                <h3>R2 存储桶</h3>
-                <div class="r2-controls">
-                   <button id="r2-new-file">新建文件</button>
-                   <button id="r2-refresh-files">刷新</button>
+            <div class="primary-side-bar" id="primary-sidebar-panel">
                 </div>
-                <ul class="file-list" id="r2-file-list">
-                    </ul>
-            </div>
             <div class="editor-area">
                 <div id="editor-container"></div>
             </div>
         </div>
 
         <div class="bottom-status-bar">
-            <span class="status-item">主分支</span>
-            <span class="status-item" id="status-line-col">Ln 1, Col 1</span>
-            <span class="status-item" id="current-language-status">Plain Text</span>
-            <span class="status-item">UTF-8</span>
-            <span class="status-item" id="status-spaces">Spaces: 4</span>
-            <span class="status-item">😊</span>
+            <span id="status-line-col" class="status-item">Ln 1, Col 1</span>
+            <span id="status-indent" class="status-item">Spaces: 4</span>
+            <span id="status-encoding" class="status-item">UTF-8</span>
+            <span id="status-language" class="status-item">Plain Text</span>
+            <div id="language-status-dropdown" class="status-item-dropdown"></div>
+            <div id="encoding-status-dropdown" class="status-item-dropdown"></div>
+            <div id="indent-status-modal" class="modal-overlay">
+                <div class="modal-content">
+                    <h2>缩进设置</h2>
+                    <label for="indent-tab-size">制表符大小:</label>
+                    <input type="number" id="indent-tab-size" min="1" max="16">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="indent-insert-spaces">
+                        <label for="indent-insert-spaces">使用空格代替制表符</label>
+                    </div>
+                    <button id="indent-apply">应用</button>
+                    <button id="indent-cancel" class="cancel">取消</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -162,37 +186,22 @@
 
     <div id="r2-password-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2>连接到 R2 存储</h2>
-            <label for="r2-password-input">请输入访问密码:</label>
-            <input type="password" id="r2-password-input" />
-            <button id="r2-password-submit">连接</button>
-            <button id="r2-password-cancel" class="cancel">取消</button>
+            <h2>连接到 R2 存储</h2><label for="r2-password-input">请输入访问密码:</label><input type="password" id="r2-password-input" /><button id="r2-password-submit">连接</button><button id="r2-password-cancel" class="cancel">取消</button>
         </div>
     </div>
     <div id="rename-file-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2 id="rename-modal-title">重命名文件</h2>
-            <label for="new-filename-input">新文件名:</label>
-            <input type="text" id="new-filename-input" />
-            <button id="rename-file-confirm">确定</button>
-            <button id="rename-file-cancel" class="cancel">取消</button>
+            <h2 id="rename-modal-title">重命名文件</h2><label for="new-filename-input">新文件名:</label><input type="text" id="new-filename-input" /><button id="rename-file-confirm">确定</button><button id="rename-file-cancel" class="cancel">取消</button>
         </div>
     </div>
     <div id="goto-line-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2>转到行</h2>
-            <label for="line-number-input">行号:</label>
-            <input type="number" id="line-number-input" min="1" />
-            <button id="goto-line-confirm">确定</button>
-            <button id="goto-line-cancel" class="cancel">取消</button>
+            <h2>转到行</h2><label for="line-number-input">行号:</label><input type="number" id="line-number-input" min="1" /><button id="goto-line-confirm">确定</button><button id="goto-line-cancel" class="cancel">取消</button>
         </div>
     </div>
     <div id="about-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2>关于 Monaco 在线编辑器</h2>
-            <p>这是一个基于 Monaco Editor 构建的在线代码编辑器，集成 Cloudflare R2 存储。</p>
-            <p>版本: 1.2.0 (R2集成)</p>
-            <button id="about-modal-close">关闭</button>
+            <h2>关于 Monaco 在线编辑器</h2><p>这是一个基于 Monaco Editor 构建的在线代码编辑器，集成 Cloudflare R2 存储。</p><p>版本: 1.3.0 (高级设置)</p><button id="about-modal-close">关闭</button>
         </div>
     </div>
 
@@ -201,546 +210,667 @@
         // --- Global State & Elements ---
         let editor;
         let r2SessionActive = false;
-        let currentR2Path = null; // Path of the file currently open from R2
-        let r2FilesCache = []; // Cache of R2 file list
+        let currentR2Path = null;
+        let r2FilesCache = [];
+        let currentOpenPanel = null; // 'explorer' or 'settings'
+        let monacoLanguages = []; // Will be populated
 
+        // DOM Elements
         const editorContainer = document.getElementById('editor-container');
-        const languageSelect = document.getElementById('language-select');
-        const themeSelect = document.getElementById('theme-select');
         const messageBox = document.getElementById('message-box');
-        const statusLineCol = document.getElementById('status-line-col');
-        const statusSpaces = document.getElementById('status-spaces');
-        const currentLanguageStatusElem = document.getElementById('current-language-status');
         const localFileInput = document.getElementById('file-input-local');
 
         const activityExplorerIcon = document.getElementById('activity-explorer');
-        const r2FileExplorerPanel = document.getElementById('r2-file-explorer-panel');
+        const activitySearchIcon = document.getElementById('activity-search');
+        const activitySettingsIcon = document.getElementById('activity-settings');
+        const primarySidebarPanel = document.getElementById('primary-sidebar-panel');
+
         const r2PasswordModal = document.getElementById('r2-password-modal');
-        const r2PasswordInput = document.getElementById('r2-password-input');
-        const r2FileListElement = document.getElementById('r2-file-list');
-        const fileSaveR2Button = document.getElementById('file-save-r2');
-
         const renameFileModal = document.getElementById('rename-file-modal');
-        const newFilenameInput = document.getElementById('new-filename-input');
-        let fileToRename = null;
-
         const gotoLineModal = document.getElementById('goto-line-modal');
-        const lineNumberInput = document.getElementById('line-number-input');
         const aboutModal = document.getElementById('about-modal');
 
+        // Status Bar Elements
+        const statusLineCol = document.getElementById('status-line-col');
+        const statusIndent = document.getElementById('status-indent');
+        const statusEncoding = document.getElementById('status-encoding');
+        const statusLanguage = document.getElementById('status-language');
+        const languageStatusDropdown = document.getElementById('language-status-dropdown');
+        const encodingStatusDropdown = document.getElementById('encoding-status-dropdown');
+        const indentStatusModal = document.getElementById('indent-status-modal');
 
-        // --- API Base Path (Adjust if your workers are on a different path) ---
-        const API_BASE = '/api'; // Assumes workers are at /api/auth, /api/files etc.
+
+        const API_BASE = '/api';
+
+        // Expanded Language List (subset, can be dynamically populated)
+        const editorLanguages = [
+            { id: 'plaintext', name: 'Plain Text', extensions: ['.txt', '.text'] },
+            { id: 'abap', name: 'ABAP', extensions: ['.abap'] },
+            { id: 'apex', name: 'Apex', extensions: ['.cls'] },
+            { id: 'azcli', name: 'Azure CLI', extensions: ['.azcli'] },
+            { id: 'bat', name: 'Batch', extensions: ['.bat', '.cmd'] },
+            { id: 'bicep', name: 'Bicep', extensions: ['.bicep'] },
+            { id: 'cameligo', name: 'CameLIGO', extensions: ['.mligo'] },
+            { id: 'clojure', name: 'Clojure', extensions: ['.clj', '.cljs', '.cljc', '.edn'] },
+            { id: 'coffeescript', name: 'CoffeeScript', extensions: ['.coffee'] },
+            { id: 'c', name: 'C', extensions: ['.c', '.h'] },
+            { id: 'cpp', name: 'C++', extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hh', '.hxx'] },
+            { id: 'csharp', name: 'C#', extensions: ['.cs', '.csx', '.cake'] },
+            { id: 'csp', name: 'CSP', extensions: [] },
+            { id: 'css', name: 'CSS', extensions: ['.css'] },
+            { id: 'cypher', name: 'Cypher', extensions: ['.cypher', '.cyp'] },
+            { id: 'dart', name: 'Dart', extensions: ['.dart'] },
+            { id: 'dockerfile', name: 'Dockerfile', extensions: ['.dockerfile', 'Dockerfile'] },
+            { id: 'ecl', name: 'ECL', extensions: ['.ecl'] },
+            { id: 'elixir', name: 'Elixir', extensions: ['.ex', '.exs'] },
+            { id: 'flow9', name: 'Flow9', extensions: ['.flow'] },
+            { id: 'fsharp', name: 'F#', extensions: ['.fs', '.fsi', '.fsx'] },
+            { id: 'freemarker2', name: 'FreeMarker', extensions: ['.ftl'] },
+            { id: 'go', name: 'Go', extensions: ['.go'] },
+            { id: 'graphql', name: 'GraphQL', extensions: ['.graphql', '.gql'] },
+            { id: 'handlebars', name: 'Handlebars', extensions: ['.hbs', '.handlebars'] },
+            { id: 'hcl', name: 'HCL', extensions: ['.hcl', '.tf', '.tfvars'] },
+            { id: 'html', name: 'HTML', extensions: ['.html', '.htm', '.xhtml', '.shtml'] },
+            { id: 'ini', name: 'INI', extensions: ['.ini', '.properties', '.gitconfig'] },
+            { id: 'java', name: 'Java', extensions: ['.java', '.jav'] },
+            { id: 'javascript', name: 'JavaScript', extensions: ['.js', '.jsx', '.mjs', '.cjs'] },
+            { id: 'json', name: 'JSON', extensions: ['.json'] },
+            { id: 'julia', name: 'Julia', extensions: ['.jl'] },
+            { id: 'kotlin', name: 'Kotlin', extensions: ['.kt', '.kts'] },
+            { id: 'less', name: 'LESS', extensions: ['.less'] },
+            { id: 'lexon', name: 'Lexon', extensions: ['.lexon'] },
+            { id: 'lua', name: 'Lua', extensions: ['.lua'] },
+            { id: 'liquid', name: 'Liquid', extensions: ['.liquid'] },
+            { id: 'm3', name: 'Modula-3', extensions: ['.m3', '.i3'] },
+            { id: 'markdown', name: 'Markdown', extensions: ['.md', '.markdown', '.mdown', '.mkdn'] },
+            { id: 'mips', name: 'MIPS', extensions: ['.s'] },
+            { id: 'msdax', name: 'MSDAX', extensions: ['.dax'] },
+            { id: 'mysql', name: 'MySQL', extensions: ['.mysql'] },
+            { id: 'objective-c', name: 'Objective-C', extensions: ['.m'] },
+            { id: 'pascal', name: 'Pascal', extensions: ['.pas', '.p', '.pp'] },
+            { id: 'pascaligo', name: 'PascalIGO', extensions: ['.ligo'] },
+            { id: 'perl', name: 'Perl', extensions: ['.pl', '.pm'] },
+            { id: 'pgsql', name: 'PostgreSQL', extensions: ['.pgsql', '.sql'] }, // Often shares .sql
+            { id: 'php', name: 'PHP', extensions: ['.php', '.php4', '.php5', '.phtml'] },
+            { id: 'pla', name: 'PLA', extensions: ['.pla'] },
+            { id: 'postiats', name: 'ATS', extensions: ['.dats', '.sats', '.hats'] },
+            { id: 'powerquery', name: 'PowerQuery', extensions: ['.pq', '.pqm'] },
+            { id: 'powershell', name: 'PowerShell', extensions: ['.ps1', '.psm1', '.psd1'] },
+            { id: 'protobuf', name: 'Protocol Buffers', extensions: ['.proto'] },
+            { id: 'pug', name: 'Pug/Jade', extensions: ['.pug', '.jade'] },
+            { id: 'python', name: 'Python', extensions: ['.py', '.pyw', '.rpy'] },
+            { id: 'qsharp', name: 'Q#', extensions: ['.qs'] },
+            { id: 'r', name: 'R', extensions: ['.r', '.R'] },
+            { id: 'razor', name: 'Razor', extensions: ['.cshtml'] },
+            { id: 'redis', name: 'Redis', extensions: ['.redis'] },
+            { id: 'redshift', name: 'Redshift', extensions: [] }, // Often .sql
+            { id: 'restructuredtext', name: 'reStructuredText', extensions: ['.rst'] },
+            { id: 'ruby', name: 'Ruby', extensions: ['.rb', '.rbx', '.rjs', '.gemspec'] },
+            { id: 'rust', name: 'Rust', extensions: ['.rs', '.rlib'] },
+            { id: 'sb', name: 'Small Basic', extensions: ['.sb'] },
+            { id: 'scala', name: 'Scala', extensions: ['.scala', '.sc', '.sbt'] },
+            { id: 'scheme', name: 'Scheme', extensions: ['.scm', '.ss', '.sch', '.rkt'] },
+            { id: 'scss', name: 'SCSS', extensions: ['.scss'] },
+            { id: 'shell', name: 'Shell Script', extensions: ['.sh', '.bash', '.zsh', '.fish', '.ksh'] },
+            { id: 'sol', name: 'Solidity', extensions: ['.sol'] },
+            { id: 'sophia', name: 'Sophia', extensions: ['.aes'] },
+            { id: 'sparql', name: 'SPARQL', extensions: ['.rq'] },
+            { id: 'sql', name: 'SQL', extensions: ['.sql'] },
+            { id: 'st', name: 'StructuredText', extensions: ['.st'] },
+            { id: 'swift', name: 'Swift', extensions: ['.swift'] },
+            { id: 'systemverilog', name: 'SystemVerilog', extensions: ['.sv', '.svh'] },
+            { id: 'tcl', name: 'TCL', extensions: ['.tcl'] },
+            { id: 'twig', name: 'Twig', extensions: ['.twig'] },
+            { id: 'typescript', name: 'TypeScript', extensions: ['.ts', '.tsx'] },
+            { id: 'vb', name: 'Visual Basic', extensions: ['.vb', '.vbs'] },
+            { id: 'verilog', name: 'Verilog', extensions: ['.v', '.vh'] },
+            { id: 'xml', name: 'XML', extensions: ['.xml', '.xsd', '.xsl', '.plist', '.svg'] },
+            { id: 'yaml', name: 'YAML', extensions: ['.yaml', '.yml'] }
+        ];
+
+        const commonEncodings = ['UTF-8', 'UTF-16LE', 'UTF-16BE', 'Windows-1252', 'ISO-8859-1'];
+        let currentEncoding = 'UTF-8';
+
 
         // --- Monaco Editor Initialization ---
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.47.0/min/vs' }});
         require(['vs/editor/editor.main'], function () {
+            // Dynamically get all languages provided by Monaco (optional, can merge with hardcoded list)
+            // monacoLanguages = monaco.languages.getLanguages().map(lang => ({id: lang.id, name: lang.aliases ? lang.aliases[0] : lang.id, extensions: lang.extensions || [] }));
+            // For now, use the curated list above for simplicity in mapping extensions and names for the UI
+
             editor = monaco.editor.create(editorContainer, {
-                value: '// 点击左侧“文件浏览器”图标连接到R2存储\n// 或从“文件”菜单打开本地文件',
+                value: '// Welcome to the Advanced Monaco Editor!\n// Click the icons on the left or items in the status bar below.',
                 language: 'plaintext',
-                theme: 'vs-dark',
+                theme: 'vs-dark', // Default theme
                 automaticLayout: true,
-                fontSize: 14,
-                minimap: { enabled: true },
+                fontSize: 14, // Default font size
+                lineNumbers: 'on', // Default line numbers
+                renderWhitespace: 'none', // Default render whitespace
+                cursorStyle: 'line', // Default cursor style
                 wordWrap: 'off',
-                renderLineHighlight: 'gutter',
-                folding: true,
-                lineNumbersMinChars: 3,
-                glyphMargin: false,
+                minimap: { enabled: true },
             });
 
-            populateDropdowns();
-            updateStatus(); // Initial status update
+            populateStaticDropdowns(); // For menus like File, Edit, etc.
+            updateStatus();
 
             // --- Event Listeners ---
             editor.onDidChangeCursorPosition(updateStatus);
             editor.onDidChangeModelOptions(updateStatus);
-            editor.onDidChangeModelContent(updateStatus);
-            languageSelect.addEventListener('change', handleLanguageChange);
-            themeSelect.addEventListener('change', handleThemeChange);
+            editor.onDidChangeModelContent(updateStatus); // For things like total lines if needed
 
-            // Dropdown Menu Logic
-            document.querySelectorAll('.menu-button').forEach(button => {
+            // Sidebar Icons
+            activityExplorerIcon.addEventListener('click', () => togglePrimarySidebarPanel('explorer'));
+            activitySearchIcon.addEventListener('click', () => { editor.getAction('actions.find').run(); setActiveIcon(activitySearchIcon); }); // Keep search icon active briefly or manage state if it opens a panel
+            activitySettingsIcon.addEventListener('click', () => togglePrimarySidebarPanel('settings'));
+
+            // Status Bar Items
+            statusLanguage.addEventListener('click', (e) => toggleStatusDropdown(e, languageStatusDropdown, populateLanguageStatusDropdown));
+            statusEncoding.addEventListener('click', (e) => toggleStatusDropdown(e, encodingStatusDropdown, populateEncodingStatusDropdown));
+            statusIndent.addEventListener('click', () => indentStatusModal.style.display = 'flex');
+            document.getElementById('indent-apply').addEventListener('click', applyIndentSettings);
+            document.getElementById('indent-cancel').addEventListener('click', () => indentStatusModal.style.display = 'none');
+
+
+            // R2, Modals, Menus (from previous versions)
+            document.getElementById('r2-password-submit').addEventListener('click', handleR2PasswordSubmit);
+            document.getElementById('r2-password-cancel').addEventListener('click', () => r2PasswordModal.style.display = 'none');
+            document.getElementById('rename-file-confirm').addEventListener('click', handleRenameR2FileConfirm);
+            document.getElementById('rename-file-cancel').addEventListener('click', () => { renameFileModal.style.display = 'none'; fileToRename = null; });
+            document.getElementById('goto-line-confirm').addEventListener('click', () => { const line = parseInt(document.getElementById('line-number-input').value, 10); if (!isNaN(line) && line > 0) { editor.revealLineInCenter(line); editor.setPosition({ lineNumber: line, column: 1 }); editor.focus(); } gotoLineModal.style.display = 'none'; });
+            document.getElementById('goto-line-cancel').addEventListener('click', () => { gotoLineModal.style.display = 'none'; });
+            document.getElementById('about-modal-close').addEventListener('click', () => { aboutModal.style.display = 'none'; });
+            setupTopMenus();
+
+            // Initial state for R2 save button
+            updateR2SaveButtonState();
+            setActiveIcon(null); // No panel open by default
+        });
+
+        function populateStaticDropdowns() { /* For File, Edit etc. - unchanged */ }
+        function setupTopMenus() { /* Event listeners for File, Edit etc. - unchanged */
+             document.querySelectorAll('.menu-button').forEach(button => {
                 button.addEventListener('click', function(event) {
                     event.stopPropagation();
                     const currentlyOpen = document.querySelector('.dropdown-content[style*="display: block"]');
                     const dropdownId = this.dataset.dropdown;
                     const targetDropdown = document.getElementById(dropdownId);
-                    closeAllDropdowns();
+                    closeAllDropdowns(); // Close all (top menu and status bar)
                     if (currentlyOpen !== targetDropdown) {
                         targetDropdown.style.display = 'block';
                     }
                 });
             });
-            window.addEventListener('click', closeAllDropdowns);
-            document.querySelectorAll('.dropdown-content').forEach(dropdown => {
+            window.addEventListener('click', closeAllDropdowns); // Close all types of dropdowns
+            document.querySelectorAll('.dropdown-content, .status-item-dropdown').forEach(dropdown => {
                 dropdown.addEventListener('click', event => event.stopPropagation());
             });
-
-
-            // --- R2 Integration Logic ---
-            activityExplorerIcon.addEventListener('click', toggleR2Explorer);
-            document.getElementById('r2-password-submit').addEventListener('click', handleR2PasswordSubmit);
-            document.getElementById('r2-password-cancel').addEventListener('click', () => r2PasswordModal.style.display = 'none');
-            document.getElementById('r2-new-file').addEventListener('click', handleNewR2File);
-            document.getElementById('r2-refresh-files').addEventListener('click', () => {
-                if(r2SessionActive) fetchR2Files(); else showMessage("请先连接到R2。");
-            });
-
             // Menu Item Actions
-            // File Menu
             document.getElementById('file-new').addEventListener('click', handleFileNew);
             document.getElementById('file-open-local').addEventListener('click', () => { localFileInput.click(); closeAllDropdowns(); });
             localFileInput.addEventListener('change', handleFileOpenLocal);
             document.getElementById('file-save-r2').addEventListener('click', handleSaveToR2);
             document.getElementById('file-download-local').addEventListener('click', handleFileDownloadLocal);
-
-            // Edit Menu
             document.getElementById('edit-undo').addEventListener('click', () => { editor.trigger('source', 'undo'); closeAllDropdowns(); });
             document.getElementById('edit-redo').addEventListener('click', () => { editor.trigger('source', 'redo'); closeAllDropdowns(); });
             document.getElementById('edit-find').addEventListener('click', () => { editor.getAction('actions.find').run(); closeAllDropdowns(); });
             document.getElementById('edit-replace').addEventListener('click', () => { editor.getAction('actions.replace').run(); closeAllDropdowns();});
-            // Selection Menu
             document.getElementById('selection-select-all').addEventListener('click', () => { editor.setSelection(editor.getModel().getFullModelRange()); editor.focus(); closeAllDropdowns(); });
-            // View Menu
-            document.getElementById('view-toggle-minimap').addEventListener('click', () => { const n = !editor.getOption(monaco.editor.EditorOption.minimap).enabled; editor.updateOptions({ minimap: { enabled: n } }); showMessage(`Minimap 已${n?'启用':'禁用'}`); closeAllDropdowns(); });
-            document.getElementById('view-toggle-wordwrap').addEventListener('click', () => { const c = editor.getOption(monaco.editor.EditorOption.wordWrap); const n = c === 'off' ? 'on' : 'off'; editor.updateOptions({ wordWrap: n }); showMessage(`自动换行已${n==='on'?'启用':'禁用'}`); closeAllDropdowns(); });
-            // Go To Menu
-            document.getElementById('goto-line').addEventListener('click', () => { gotoLineModal.style.display = 'flex'; lineNumberInput.value = editor.getPosition()?.lineNumber || 1; lineNumberInput.focus(); lineNumberInput.select(); closeAllDropdowns();});
-            document.getElementById('goto-line-confirm').addEventListener('click', () => { const line = parseInt(lineNumberInput.value, 10); if (!isNaN(line) && line > 0) { editor.revealLineInCenter(line); editor.setPosition({ lineNumber: line, column: 1 }); editor.focus(); } gotoLineModal.style.display = 'none'; });
-            document.getElementById('goto-line-cancel').addEventListener('click', () => { gotoLineModal.style.display = 'none'; });
-            // Help Menu
+            document.getElementById('view-toggle-minimap').addEventListener('click', () => { const n = !editor.getOption(monaco.editor.EditorOption.minimap).enabled; editor.updateOptions({ minimap: { enabled: n } }); showMessage(`Minimap ${n?'启用':'禁用'}`); closeAllDropdowns(); });
+            document.getElementById('view-toggle-wordwrap').addEventListener('click', () => { const c = editor.getOption(monaco.editor.EditorOption.wordWrap); const n = c === 'off' ? 'on' : 'off'; editor.updateOptions({ wordWrap: n }); showMessage(`自动换行 ${n==='on'?'启用':'禁用'}`); closeAllDropdowns(); });
+            document.getElementById('goto-line').addEventListener('click', () => { gotoLineModal.style.display = 'flex'; document.getElementById('line-number-input').value = editor.getPosition()?.lineNumber || 1; document.getElementById('line-number-input').focus(); document.getElementById('line-number-input').select(); closeAllDropdowns();});
             document.getElementById('help-about').addEventListener('click', () => { aboutModal.style.display = 'flex'; closeAllDropdowns(); });
-            document.getElementById('about-modal-close').addEventListener('click', () => { aboutModal.style.display = 'none'; });
-            // Sidebar Search
-            document.getElementById('activity-search').addEventListener('click', () => { editor.getAction('actions.find').run(); });
-            // Rename Modal
-            document.getElementById('rename-file-confirm').addEventListener('click', handleRenameR2FileConfirm);
-            document.getElementById('rename-file-cancel').addEventListener('click', () => { renameFileModal.style.display = 'none'; fileToRename = null; });
-
-
-            // Initial state for R2 save button
-            updateR2SaveButtonState();
-        });
-
-        function populateDropdowns() {
-            const commonLanguages = [
-                { value: 'plaintext', text: 'Plain Text' }, { value: 'javascript', text: 'JavaScript' },
-                { value: 'typescript', text: 'TypeScript' }, { value: 'python', text: 'Python' },
-                { value: 'html', text: 'HTML' }, { value: 'css', text: 'CSS' },
-                { value: 'json', text: 'JSON' }, { value: 'markdown', text: 'Markdown' },
-                { value: 'java', text: 'Java' }, { value: 'csharp', text: 'C#' }, { value: 'cpp', text: 'C++' },
-                { value: 'xml', text: 'XML' }, { value: 'php', text: 'PHP' }, { value: 'sql', text: 'SQL' },
-                { value: 'ruby', text: 'Ruby' }, { value: 'go', text: 'Go' }, { value: 'rust', text: 'Rust'}
-            ];
-            commonLanguages.forEach(lang => {
-                const opt = document.createElement('option');
-                opt.value = lang.value; opt.textContent = lang.text;
-                languageSelect.appendChild(opt);
-            });
-            languageSelect.value = 'plaintext';
-
-            ['vs', 'vs-dark', 'hc-black', 'hc-light'].forEach(themeName => {
-                const opt = document.createElement('option');
-                opt.value = themeName; opt.textContent = themeName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-                themeSelect.appendChild(opt);
-            });
-            themeSelect.value = 'vs-dark';
         }
 
-        function handleLanguageChange() {
-            const langVal = languageSelect.value;
-            monaco.editor.setModelLanguage(editor.getModel(), langVal);
-            updateStatus();
-            showMessage(`语言已更改为: ${languageSelect.options[languageSelect.selectedIndex].text}`);
+        function setActiveIcon(activeIconElement) {
+            [activityExplorerIcon, activitySettingsIcon, activitySearchIcon].forEach(icon => icon.classList.remove('active'));
+            if (activeIconElement) {
+                activeIconElement.classList.add('active');
+            }
         }
 
-        function handleThemeChange() {
-            const selectedTheme = themeSelect.value;
-            monaco.editor.setTheme(selectedTheme);
-            if (selectedTheme === 'vs-dark' || selectedTheme === 'hc-black') {
+        function togglePrimarySidebarPanel(panelType) {
+            closeAllDropdowns();
+            if (currentOpenPanel === panelType && primarySidebarPanel.classList.contains('visible')) {
+                primarySidebarPanel.classList.remove('visible');
+                setActiveIcon(null);
+                currentOpenPanel = null;
+            } else {
+                primarySidebarPanel.innerHTML = ''; // Clear previous content
+                if (panelType === 'explorer') {
+                    primarySidebarPanel.appendChild(buildR2ExplorerDOM());
+                    if (r2SessionActive) fetchR2Files(); else renderR2FileList(); // Render empty/login prompt
+                    setActiveIcon(activityExplorerIcon);
+                } else if (panelType === 'settings') {
+                    primarySidebarPanel.appendChild(buildSettingsDOM());
+                    setActiveIcon(activitySettingsIcon);
+                }
+                primarySidebarPanel.classList.add('visible');
+                currentOpenPanel = panelType;
+            }
+        }
+
+        function buildR2ExplorerDOM() {
+            const explorerFragment = document.createDocumentFragment();
+            const title = document.createElement('h3');
+            title.textContent = 'R2 存储桶';
+            explorerFragment.appendChild(title);
+
+            const controls = document.createElement('div');
+            controls.className = 'r2-controls';
+            const newFileBtn = document.createElement('button');
+            newFileBtn.id = 'r2-new-file-sidebar'; newFileBtn.textContent = '新建文件';
+            newFileBtn.onclick = handleNewR2File;
+            const refreshBtn = document.createElement('button');
+            refreshBtn.id = 'r2-refresh-files-sidebar'; refreshBtn.textContent = '刷新';
+            refreshBtn.onclick = () => { if(r2SessionActive) fetchR2Files(); else showMessage("请先连接到R2。"); };
+            controls.appendChild(newFileBtn);
+            controls.appendChild(refreshBtn);
+            explorerFragment.appendChild(controls);
+
+            const ul = document.createElement('ul');
+            ul.className = 'file-list';
+            ul.id = 'r2-file-list-sidebar'; // New ID to avoid conflict if old one is cached
+            explorerFragment.appendChild(ul);
+            return explorerFragment;
+        }
+
+        function buildSettingsDOM() {
+            const settingsFragment = document.createDocumentFragment();
+            const title = document.createElement('h3');
+            title.textContent = '编辑器设置';
+            settingsFragment.appendChild(title);
+
+            // Theme Setting
+            const themeGroup = createSettingGroup('主题 (Theme)', [
+                createSelectSetting('theme-setting-select', editor.getOption(monaco.editor.EditorOption.theme),
+                    ['vs', 'vs-dark', 'hc-black', 'hc-light'].map(t => ({value: t, text: t})),
+                    (value) => { editor.updateOptions({ theme: value }); handleThemeChangeForBody(value); }
+                )
+            ]);
+            settingsFragment.appendChild(themeGroup);
+
+            // Font Size
+            const fontSizeGroup = createSettingGroup('字体大小 (Font Size)', [
+                createNumberInputSetting('font-size-setting-input', editor.getOption(monaco.editor.EditorOption.fontSize), 8, 40,
+                    (value) => editor.updateOptions({ fontSize: parseInt(value, 10) })
+                )
+            ]);
+            settingsFragment.appendChild(fontSizeGroup);
+
+            // Line Numbers
+            const lineNumbersGroup = createSettingGroup('行号 (Line Numbers)', [
+                createSelectSetting('linenumbers-setting-select', editor.getOption(monaco.editor.EditorOption.lineNumbers).toString(), // .toString() for 'on', 'off', etc.
+                    [{value: 'on', text: '开 (On)'}, {value: 'off', text: '关 (Off)'}, {value: 'relative', text: '相对 (Relative)'}, {value: 'interval', text: '间隔 (Interval)'}],
+                    (value) => editor.updateOptions({ lineNumbers: value })
+                )
+            ]);
+            settingsFragment.appendChild(lineNumbersGroup);
+
+            // Render Whitespace
+            const renderWhitespaceGroup = createSettingGroup('渲染空白字符 (Render Whitespace)', [
+                createSelectSetting('renderwhitespace-setting-select', editor.getOption(monaco.editor.EditorOption.renderWhitespace),
+                    [{value: 'none', text: '无 (None)'}, {value: 'boundary', text: '边界 (Boundary)'}, {value: 'selection', text: '选中区 (Selection)'}, {value: 'all', text: '所有 (All)'}],
+                    (value) => editor.updateOptions({ renderWhitespace: value })
+                )
+            ]);
+            settingsFragment.appendChild(renderWhitespaceGroup);
+            
+            // Cursor Style
+            const cursorStyleGroup = createSettingGroup('光标样式 (Cursor Style)', [
+                createSelectSetting('cursorstyle-setting-select', editor.getOption(monaco.editor.EditorOption.cursorStyle),
+                    ['line', 'block', 'underline', 'line-thin', 'block-outline', 'underline-thin'].map(s => ({value: s, text: s.charAt(0).toUpperCase() + s.slice(1)})),
+                    (value) => editor.updateOptions({ cursorStyle: value })
+                )
+            ]);
+            settingsFragment.appendChild(cursorStyleGroup);
+
+            // Word Wrap
+            const wordWrapGroup = createSettingGroup('自动换行 (Word Wrap)', [
+                 createSelectSetting('wordwrap-setting-select', editor.getOption(monaco.editor.EditorOption.wordWrap),
+                    [{value: 'off', text: '关 (Off)'}, {value: 'on', text: '开 (On)'}, {value: 'wordWrapColumn', text: '按列 (Column)'}, {value: 'bounded', text: '受限 (Bounded)'}],
+                    (value) => editor.updateOptions({ wordWrap: value })
+                )
+            ]);
+            settingsFragment.appendChild(wordWrapGroup);
+            
+            // Minimap
+            const minimapGroup = createSettingGroup('代码缩略图 (Minimap)', [
+                createCheckboxSetting('minimap-setting-checkbox', editor.getOption(monaco.editor.EditorOption.minimap).enabled, '启用 Minimap',
+                (checked) => editor.updateOptions({ minimap: {enabled: checked} })
+                )
+            ]);
+            settingsFragment.appendChild(minimapGroup);
+
+            return settingsFragment;
+        }
+
+        function createSettingGroup(labelText, controls) {
+            const group = document.createElement('div');
+            group.className = 'settings-group';
+            const label = document.createElement('label'); // Using it more like a section title
+            label.textContent = labelText;
+            group.appendChild(label);
+            controls.forEach(control => group.appendChild(control));
+            return group;
+        }
+
+        function createSelectSetting(id, currentValue, optionsArray, onChangeCallback) {
+            const select = document.createElement('select');
+            select.id = id;
+            optionsArray.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.text;
+                if (opt.value === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+            select.onchange = (e) => onChangeCallback(e.target.value);
+            return select;
+        }
+        function createNumberInputSetting(id, currentValue, min, max, onChangeCallback) {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = id;
+            input.value = currentValue;
+            input.min = min;
+            input.max = max;
+            input.onchange = (e) => onChangeCallback(e.target.value);
+            input.oninput = (e) => onChangeCallback(e.target.value); // For more responsive updates
+            return input;
+        }
+        function createCheckboxSetting(id, currentValue, labelText, onChangeCallback) {
+            const wrapper = document.createElement('div');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = id;
+            checkbox.checked = currentValue;
+            const label = document.createElement('label');
+            label.htmlFor = id;
+            label.textContent = labelText;
+            label.style.display = 'inline'; label.style.marginLeft = '0.5rem'; label.style.color='#ccc'; // Inline label for checkbox
+
+            checkbox.onchange = (e) => onChangeCallback(e.target.checked);
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            return wrapper;
+        }
+
+
+        function handleThemeChangeForBody(themeName) {
+             if (themeName === 'vs-dark' || themeName === 'hc-black') {
                 document.body.style.backgroundColor = '#1e1e1e'; document.body.style.color = '#cccccc';
             } else {
                 document.body.style.backgroundColor = '#f3f4f6'; document.body.style.color = '#1f2937';
             }
-            showMessage(`主题已更改为: ${selectedTheme}`);
         }
 
-        function handleFileNew() {
-            editor.setValue('');
-            currentR2Path = null;
-            updateR2SaveButtonState();
-            showMessage('新文件已创建 (编辑器已清空)');
-            if (r2SessionActive) renderR2FileList(); // To deselect active file
-            closeAllDropdowns();
-            updateStatus();
+        // --- Status Bar Dropdown Logic ---
+        function toggleStatusDropdown(event, dropdownElement, populateFunction) {
+            event.stopPropagation();
+            const isVisible = dropdownElement.style.display === 'block';
+            closeAllDropdowns(); // Close all other dropdowns first
+            if (!isVisible) {
+                populateFunction(dropdownElement);
+                const rect = event.currentTarget.getBoundingClientRect();
+                dropdownElement.style.right = (document.body.offsetWidth - rect.right) + 'px'; // Align to right of clicked item
+                dropdownElement.style.display = 'block';
+            }
         }
 
-        function handleFileOpenLocal(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    editor.setValue(e.target.result);
-                    currentR2Path = null; // It's a local file, not from R2
-                    showMessage(`本地文件 ${file.name} 已加载`);
-                    updateR2SaveButtonState(); // R2 save should prompt for new R2 name
-                    if (r2SessionActive) renderR2FileList(); // Deselect R2 active file
-
-                    const extension = file.name.split('.').pop().toLowerCase();
-                    const langMap = { js: 'javascript', ts: 'typescript', py: 'python', java: 'java', html: 'html', css: 'css', json: 'json', md: 'markdown', txt: 'plaintext' };
-                    const defaultLang = 'plaintext';
-                    const selectedLang = langMap[extension] || defaultLang;
-                    if (Array.from(languageSelect.options).some(opt => opt.value === selectedLang)) {
-                        languageSelect.value = selectedLang;
-                        monaco.editor.setModelLanguage(editor.getModel(), selectedLang);
-                    }
-                    updateStatus();
+        function populateLanguageStatusDropdown(dropdownElement) {
+            dropdownElement.innerHTML = ''; // Clear existing
+            editorLanguages.forEach(lang => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = lang.name;
+                item.dataset.langId = lang.id;
+                item.onclick = () => {
+                    monaco.editor.setModelLanguage(editor.getModel(), lang.id);
+                    updateStatus(); // This will update statusLanguage.textContent
+                    showMessage(`语言更改为: ${lang.name}`);
+                    closeAllDropdowns();
                 };
-                reader.readAsText(file);
-            }
-            localFileInput.value = ''; // Reset file input
-        }
-
-        function handleFileDownloadLocal() {
-            const text = editor.getValue();
-            const currentLang = languageSelect.value;
-            let filename = "download.txt";
-            const langExtMap = { javascript: '.js', typescript: '.ts', python: '.py', java: '.java', html: '.html', css: '.css', json: '.json', markdown: '.md', plaintext: '.txt' };
-            if (langExtMap[currentLang]) {
-                filename = `code${langExtMap[currentLang]}`;
-            }
-            const userFilename = prompt("请输入要下载的文件名:", filename);
-            if (!userFilename) { showMessage("下载已取消。"); return; }
-
-            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = userFilename;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(link.href);
-            showMessage(`文件已下载为 ${userFilename}`);
-            closeAllDropdowns();
-        }
-
-
-        function toggleR2Explorer() {
-            if (!r2SessionActive) {
-                r2PasswordModal.style.display = 'flex';
-                r2PasswordInput.focus();
-            } else {
-                r2FileExplorerPanel.classList.toggle('visible');
-                activityExplorerIcon.classList.toggle('active', r2FileExplorerPanel.classList.contains('visible'));
-                if (r2FileExplorerPanel.classList.contains('visible') && r2FilesCache.length === 0) {
-                    fetchR2Files();
-                }
-            }
-        }
-
-        async function handleR2PasswordSubmit() {
-            const password = r2PasswordInput.value;
-            if (!password) { showMessage("请输入密码。"); return; }
-
-            showMessage("正在连接到R2...", 5000);
-            try {
-                const response = await fetch(`${API_BASE}/auth`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    r2SessionActive = true;
-                    showMessage("R2 连接成功！");
-                    r2PasswordModal.style.display = 'none';
-                    r2PasswordInput.value = '';
-                    r2FileExplorerPanel.classList.add('visible');
-                    activityExplorerIcon.classList.add('active');
-                    updateR2SaveButtonState();
-                    fetchR2Files();
-                } else {
-                    showMessage(`认证失败: ${data.error || '未知错误'}`);
-                    r2SessionActive = false;
-                    updateR2SaveButtonState();
-                }
-            } catch (error) {
-                showMessage(`连接错误: ${error.message}`);
-                r2SessionActive = false;
-                updateR2SaveButtonState();
-            }
-        }
-
-        async function fetchR2Files() {
-            if (!r2SessionActive) { showMessage("未连接到 R2。"); return; }
-            showMessage("正在获取文件列表...", 5000);
-            try {
-                const response = await fetch(`${API_BASE}/files`);
-                if (!response.ok) throw new Error(`HTTP error ${response.status}. ${await response.text()}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    r2FilesCache = data.files.sort((a,b) => a.key.localeCompare(b.key));
-                    renderR2FileList();
-                    showMessage("文件列表已更新。");
-                } else {
-                    showMessage(`获取文件列表失败: ${data.error}`);
-                }
-            } catch (error) {
-                showMessage(`获取文件列表错误: ${error.message}`);
-            }
-        }
-
-        function renderR2FileList() {
-            r2FileListElement.innerHTML = '';
-            if (!r2SessionActive) {
-                 const li = document.createElement('li');
-                 li.textContent = '未连接到R2。';
-                 li.style.fontStyle = 'italic';
-                 li.style.padding = '0.5rem';
-                 r2FileListElement.appendChild(li);
-                 return;
-            }
-            if (r2FilesCache.length === 0) {
-                const li = document.createElement('li');
-                li.textContent = '存储桶为空或无法访问。';
-                li.style.fontStyle = 'italic';
-                li.style.padding = '0.5rem';
-                r2FileListElement.appendChild(li);
-                return;
-            }
-            r2FilesCache.forEach(file => {
-                const li = document.createElement('li');
-                li.dataset.filename = file.key;
-                if(file.key === currentR2Path) li.classList.add('active-file');
-
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'file-item-name';
-                nameSpan.textContent = file.key;
-                nameSpan.title = `${file.key} (${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'})`;
-                li.appendChild(nameSpan);
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'file-item-actions';
-
-                const openButton = document.createElement('button');
-                openButton.innerHTML = '&#128194;'; // Open folder icon
-                openButton.title = '打开';
-                openButton.onclick = (e) => { e.stopPropagation(); openR2File(file.key); };
-                actionsDiv.appendChild(openButton);
-
-                const renameButton = document.createElement('button');
-                renameButton.innerHTML = '&#9998;'; // Pencil icon
-                renameButton.title = '重命名';
-                renameButton.onclick = (e) => { e.stopPropagation(); promptRenameR2File(file.key); };
-                actionsDiv.appendChild(renameButton);
-
-                const deleteButton = document.createElement('button');
-                deleteButton.innerHTML = '&#128465;'; // Trash can icon
-                deleteButton.title = '删除';
-                deleteButton.onclick = (e) => { e.stopPropagation(); deleteR2File(file.key); };
-                actionsDiv.appendChild(deleteButton);
-
-                li.appendChild(actionsDiv);
-                li.onclick = () => openR2File(file.key);
-                r2FileListElement.appendChild(li);
+                dropdownElement.appendChild(item);
             });
         }
 
-        async function openR2File(filename) {
+        function populateEncodingStatusDropdown(dropdownElement) {
+            dropdownElement.innerHTML = '';
+            commonEncodings.forEach(enc => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = enc;
+                item.onclick = () => {
+                    currentEncoding = enc; // Store it
+                    updateStatus(); // This will update statusEncoding.textContent
+                    showMessage(`文件编码（概念性）设置为: ${enc}. 注意: 这主要用于显示或未来保存操作，编辑器内部仍为UTF-16。`);
+                    closeAllDropdowns();
+                };
+                dropdownElement.appendChild(item);
+            });
+        }
+        
+        function applyIndentSettings() {
+            const tabSize = parseInt(document.getElementById('indent-tab-size').value, 10);
+            const insertSpaces = document.getElementById('indent-insert-spaces').checked;
+            if (!isNaN(tabSize) && tabSize > 0) {
+                editor.updateOptions({ tabSize, insertSpaces });
+                updateStatus();
+                showMessage(`缩进已设置为: ${insertSpaces ? 'Spaces' : 'Tabs'}, 大小 ${tabSize}`);
+            }
+            indentStatusModal.style.display = 'none';
+        }
+
+
+        // --- Update Status Bar ---
+        function updateStatus() {
+            if (!editor) return;
+            const position = editor.getPosition();
+            if (position) {
+                statusLineCol.textContent = `Ln ${position.lineNumber}, Col ${position.column}`;
+            }
+            const modelOptions = editor.getModel()?.getOptions();
+            if (modelOptions) {
+                document.getElementById('indent-tab-size').value = modelOptions.tabSize;
+                document.getElementById('indent-insert-spaces').checked = modelOptions.insertSpaces;
+                statusIndent.textContent = `${modelOptions.insertSpaces ? 'Spaces' : 'Tab Size'}: ${modelOptions.tabSize}`;
+            }
+            const currentLangId = editor.getModel()?.getLanguageId();
+            const langObj = editorLanguages.find(l => l.id === currentLangId);
+            statusLanguage.textContent = langObj ? langObj.name : (currentLangId || 'Plain Text');
+            statusEncoding.textContent = currentEncoding;
+        }
+
+        // --- R2 and File Handling (Adapted from previous versions) ---
+        function handleR2PasswordSubmit() { /* ... unchanged ... */
+            const password = document.getElementById('r2-password-input').value;
+            if (!password) { showMessage("请输入密码。"); return; }
+            showMessage("正在连接到R2...", 5000);
+            fetch(`${API_BASE}/auth`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        r2SessionActive = true; showMessage("R2 连接成功！"); r2PasswordModal.style.display = 'none';
+                        document.getElementById('r2-password-input').value = '';
+                        if (currentOpenPanel === 'explorer') fetchR2Files(); // Refresh if explorer is open
+                        else togglePrimarySidebarPanel('explorer'); // Open explorer
+                        updateR2SaveButtonState();
+                    } else {
+                        showMessage(`认证失败: ${data.error || '未知错误'}`); r2SessionActive = false; updateR2SaveButtonState();
+                    }
+                }).catch(error => { showMessage(`连接错误: ${error.message}`); r2SessionActive = false; updateR2SaveButtonState(); });
+        }
+
+        function fetchR2Files() { /* ... get r2-file-list-sidebar ... */
+            if (!r2SessionActive) { return; } // No message, renderR2FileList will show "not connected"
+            showMessage("正在获取文件列表...", 5000);
+            const r2ListElem = document.getElementById('r2-file-list-sidebar');
+            if (r2ListElem) r2ListElem.innerHTML = '<li><i>加载中...</i></li>';
+
+            fetch(`${API_BASE}/files`)
+                .then(response => { if (!response.ok) throw new Error(`HTTP error ${response.status}`); return response.json(); })
+                .then(data => {
+                    if (data.success) {
+                        r2FilesCache = data.files.sort((a,b) => a.key.localeCompare(b.key));
+                        renderR2FileList(); showMessage("文件列表已更新。");
+                    } else { showMessage(`获取文件列表失败: ${data.error}`); renderR2FileList(); } // Render even on error to clear loading
+                }).catch(error => { showMessage(`获取文件列表错误: ${error.message}`); renderR2FileList(); });
+        }
+        
+        function renderR2FileList() { /* ... use r2-file-list-sidebar ... */
+            const r2ListElem = document.getElementById('r2-file-list-sidebar');
+            if (!r2ListElem) return; // Panel not open or not explorer
+            r2ListElem.innerHTML = '';
+
+            if (!r2SessionActive) {
+                 const li = document.createElement('li');
+                 li.textContent = '未连接到R2。请点击浏览器图标连接。';
+                 li.style.fontStyle = 'italic'; li.style.padding = '0.5rem';
+                 r2ListElem.appendChild(li);
+                 return;
+            }
+            if (r2FilesCache.length === 0) {
+                const li = document.createElement('li'); li.textContent = '存储桶为空。';
+                li.style.fontStyle = 'italic'; li.style.padding = '0.5rem';
+                r2ListElem.appendChild(li); return;
+            }
+            r2FilesCache.forEach(file => {
+                const li = document.createElement('li'); li.dataset.filename = file.key;
+                if(file.key === currentR2Path) li.classList.add('active-file');
+                const nameSpan = document.createElement('span'); nameSpan.className = 'file-item-name';
+                nameSpan.textContent = file.key; nameSpan.title = `${file.key} (${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'N/A'})`;
+                li.appendChild(nameSpan);
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'file-item-actions';
+                const openBtn = document.createElement('button'); openBtn.innerHTML = '&#128194;'; openBtn.title = '打开';
+                openBtn.onclick = (e) => { e.stopPropagation(); openR2File(file.key); }; actionsDiv.appendChild(openBtn);
+                const renameBtn = document.createElement('button'); renameBtn.innerHTML = '&#9998;'; renameBtn.title = '重命名';
+                renameBtn.onclick = (e) => { e.stopPropagation(); promptRenameR2File(file.key); }; actionsDiv.appendChild(renameBtn);
+                const deleteBtn = document.createElement('button'); deleteBtn.innerHTML = '&#128465;'; deleteBtn.title = '删除';
+                deleteBtn.onclick = (e) => { e.stopPropagation(); deleteR2File(file.key); }; actionsDiv.appendChild(deleteBtn);
+                li.appendChild(actionsDiv);
+                li.onclick = () => openR2File(file.key);
+                r2ListElem.appendChild(li);
+            });
+        }
+
+        async function openR2File(filename) { /* ... unchanged but updates statusLanguage via updateStatus() ... */
             if (!r2SessionActive) { showMessage("未连接到 R2。"); return; }
             showMessage(`正在打开 ${filename}...`, 5000);
             try {
                 const response = await fetch(`${API_BASE}/files/${encodeURIComponent(filename)}`);
-                if (!response.ok) {
-                     const errorText = await response.text(); // Try to get text for more info
-                     let errorDetail = `HTTP error ${response.status}`;
-                     try { errorDetail = JSON.parse(errorText).error || errorDetail; } catch(e){}
-                     throw new Error(errorDetail);
-                }
-                const content = await response.text();
-                editor.setValue(content);
-                currentR2Path = filename;
-
+                if (!response.ok) { const errorText = await response.text(); let errorDetail = `HTTP error ${response.status}`; try { errorDetail = JSON.parse(errorText).error || errorDetail; } catch(e){} throw new Error(errorDetail); }
+                const content = await response.text(); editor.setValue(content); currentR2Path = filename;
                 const extension = filename.split('.').pop().toLowerCase();
-                const langMap = { js: 'javascript', ts: 'typescript', py: 'python', java: 'java', html: 'html', css: 'css', json: 'json', md: 'markdown', txt: 'plaintext', xml: 'xml', php: 'php', sql: 'sql', rb: 'ruby', go: 'go', rs: 'rust' };
-                const defaultLang = 'plaintext';
-                const selectedLang = langMap[extension] || defaultLang;
-
-                if (Array.from(languageSelect.options).some(opt => opt.value === selectedLang)) {
-                    languageSelect.value = selectedLang;
-                    monaco.editor.setModelLanguage(editor.getModel(), selectedLang);
+                let langToSet = 'plaintext';
+                for (const lang of editorLanguages) {
+                    if (lang.extensions && lang.extensions.includes('.' + extension)) {
+                        langToSet = lang.id; break;
+                    }
                 }
-                updateStatus();
-                renderR2FileList();
-                showMessage(`${filename} 已打开。`);
-                updateR2SaveButtonState();
-
-            } catch (error) {
-                showMessage(`打开文件错误: ${error.message}`);
-                currentR2Path = null;
-                updateR2SaveButtonState();
-            }
+                monaco.editor.setModelLanguage(editor.getModel(), langToSet);
+                updateStatus(); renderR2FileList(); showMessage(`${filename} 已打开。`); updateR2SaveButtonState();
+            } catch (error) { showMessage(`打开文件错误: ${error.message}`); currentR2Path = null; updateR2SaveButtonState(); }
         }
-
-        async function handleSaveToR2() {
+        function handleSaveToR2() { /* ... unchanged ... */
             if (!r2SessionActive) { showMessage("未连接到 R2。请先连接。"); closeAllDropdowns(); return; }
-
             let filenameToSave = currentR2Path;
             if (!filenameToSave) {
                 filenameToSave = prompt("请输入要保存到 R2 的文件名 (例如: new_file.js):", currentR2Path || "untitled.txt");
                 if (!filenameToSave) { showMessage("已取消保存。"); closeAllDropdowns(); return; }
             }
-
-            const content = editor.getValue();
-            showMessage(`正在保存 ${filenameToSave} 到 R2...`, 5000);
-            try {
-                const response = await fetch(`${API_BASE}/files/${encodeURIComponent(filenameToSave)}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'text/plain' }, // Worker can set specific type
-                    body: content
-                });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    showMessage(`${filenameToSave} 已成功保存到 R2。`);
-                    currentR2Path = filenameToSave;
-                    if (!r2FilesCache.some(f => f.key === filenameToSave)) { // If it's a new file add to cache for immediate render
-                        r2FilesCache.push({key: filenameToSave, size: content.length, uploaded: new Date().toISOString()});
-                        r2FilesCache.sort((a,b) => a.key.localeCompare(b.key));
-                    } else { // Update size if existing
-                         const idx = r2FilesCache.findIndex(f => f.key === filenameToSave);
-                         if(idx !== -1) r2FilesCache[idx].size = content.length;
-                    }
-                    renderR2FileList();
-                    updateR2SaveButtonState();
-                } else {
-                    showMessage(`保存失败: ${data.error || '未知错误'}`);
-                }
-            } catch (error) {
-                showMessage(`保存错误: ${error.message}`);
-            }
+            const content = editor.getValue(); showMessage(`正在保存 ${filenameToSave} 到 R2...`, 5000);
+            fetch(`${API_BASE}/files/${encodeURIComponent(filenameToSave)}`, { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: content })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`${filenameToSave} 已成功保存到 R2。`); currentR2Path = filenameToSave;
+                        if (!r2FilesCache.some(f => f.key === filenameToSave)) { r2FilesCache.push({key: filenameToSave, size: content.length, uploaded: new Date().toISOString()}); r2FilesCache.sort((a,b) => a.key.localeCompare(b.key)); }
+                        else { const idx = r2FilesCache.findIndex(f => f.key === filenameToSave); if(idx !== -1) r2FilesCache[idx].size = content.length; }
+                        renderR2FileList(); updateR2SaveButtonState();
+                    } else { showMessage(`保存失败: ${data.error || '未知错误'}`); }
+                }).catch(error => { showMessage(`保存错误: ${error.message}`); });
             closeAllDropdowns();
         }
-
-        async function deleteR2File(filename) {
+        function deleteR2File(filename) { /* ... unchanged ... */
             if (!r2SessionActive) { showMessage("未连接到 R2。"); return; }
             if (!confirm(`确定要删除 R2 中的文件 "${filename}" 吗？此操作不可撤销。`)) return;
-
             showMessage(`正在删除 ${filename}...`, 5000);
-            try {
-                const response = await fetch(`${API_BASE}/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-                const data = await response.json();
-                if (response.ok && data.success) {
-                    showMessage(`${filename} 已删除。`);
-                    if (currentR2Path === filename) {
-                        editor.setValue(`// ${filename} 已从 R2 删除。\n// 编辑器内容保留，可另存或新建。`);
-                        currentR2Path = null;
-                        updateR2SaveButtonState();
-                    }
-                    r2FilesCache = r2FilesCache.filter(f => f.key !== filename); // Remove from cache
-                    renderR2FileList();
-                } else {
-                    showMessage(`删除失败: ${data.error || '未知错误'}`);
-                }
-            } catch (error) {
-                showMessage(`删除错误: ${error.message}`);
-            }
+            fetch(`${API_BASE}/files/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`${filename} 已删除。`);
+                        if (currentR2Path === filename) { editor.setValue(`// ${filename} 已从 R2 删除。`); currentR2Path = null; updateR2SaveButtonState(); }
+                        r2FilesCache = r2FilesCache.filter(f => f.key !== filename); renderR2FileList();
+                    } else { showMessage(`删除失败: ${data.error || '未知错误'}`); }
+                }).catch(error => { showMessage(`删除错误: ${error.message}`); });
         }
-        
-        function promptRenameR2File(filename) {
+        function promptRenameR2File(filename) { /* ... unchanged ... */
             if (!r2SessionActive) { showMessage("未连接到 R2。"); return; }
-            fileToRename = filename;
-            document.getElementById('rename-modal-title').textContent = `重命名 "${filename}"`;
-            newFilenameInput.value = filename;
-            renameFileModal.style.display = 'flex';
-            newFilenameInput.focus();
-            newFilenameInput.select();
+            fileToRename = filename; document.getElementById('rename-modal-title').textContent = `重命名 "${filename}"`;
+            document.getElementById('new-filename-input').value = filename; renameFileModal.style.display = 'flex';
+            document.getElementById('new-filename-input').focus(); document.getElementById('new-filename-input').select();
         }
-
-        async function handleRenameR2FileConfirm() {
-            const newName = newFilenameInput.value.trim();
-            if (!newName || newName === fileToRename) {
-                showMessage("文件名无效或未更改。");
-                renameFileModal.style.display = 'none';
-                return;
-            }
-            renameFileModal.style.display = 'none';
-            showMessage(`正在重命名 ${fileToRename} 为 ${newName}...`, 5000);
-
+        async function handleRenameR2FileConfirm() { /* ... unchanged ... */
+            const newName = document.getElementById('new-filename-input').value.trim();
+            if (!newName || newName === fileToRename) { showMessage("文件名无效或未更改。"); renameFileModal.style.display = 'none'; return; }
+            renameFileModal.style.display = 'none'; showMessage(`正在重命名 ${fileToRename} 为 ${newName}...`, 5000);
             try {
-                const response = await fetch(`${API_BASE}/files/rename`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ oldFilename: fileToRename, newFilename: newName })
-                });
+                const response = await fetch(`${API_BASE}/files/rename`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldFilename: fileToRename, newFilename: newName }) });
                 const data = await response.json();
                 if (response.ok && data.success) {
-                    showMessage(`文件已重命名为 ${newName}`);
-                    if (currentR2Path === fileToRename) {
-                        currentR2Path = newName;
-                    }
-                    // Update cache
+                    showMessage(`文件已重命名为 ${newName}`); if (currentR2Path === fileToRename) currentR2Path = newName;
                     const oldFileIndex = r2FilesCache.findIndex(f => f.key === fileToRename);
-                    if (oldFileIndex !== -1) {
-                        r2FilesCache[oldFileIndex].key = newName;
-                        r2FilesCache.sort((a,b) => a.key.localeCompare(b.key));
-                    }
-                    renderR2FileList();
-                    updateR2SaveButtonState(); // If current file was renamed
-                } else {
-                    showMessage(`重命名失败: ${data.error || '未知错误'}`);
-                }
-            } catch (error) {
-                showMessage(`重命名错误: ${error.message}`);
-            }
+                    if (oldFileIndex !== -1) { r2FilesCache[oldFileIndex].key = newName; r2FilesCache.sort((a,b) => a.key.localeCompare(b.key));}
+                    renderR2FileList(); updateR2SaveButtonState();
+                } else { showMessage(`重命名失败: ${data.error || '未知错误'}`); }
+            } catch (error) { showMessage(`重命名错误: ${error.message}`); }
             fileToRename = null;
         }
-
-        async function handleNewR2File() {
+        function handleNewR2File() { /* ... unchanged ... */
             if (!r2SessionActive) { showMessage("未连接到 R2。"); return; }
             const newFilename = prompt("请输入新文件名 (例如: script.js):", "new_file.txt");
             if (newFilename) {
                 const existingFile = r2FilesCache.find(f => f.key === newFilename);
-                if (existingFile) {
-                    if(!confirm(`文件 "${newFilename}" 已存在于R2中。要打开并覆盖它吗？ (选择“取消”则仅在编辑器中作为新标签打开)`)){
-                         editor.setValue(`// 新建: ${newFilename}\n`);
-                         currentR2Path = null;
-                         showMessage(`在编辑器中为 "${newFilename}" 创建了新标签页。记得保存到R2。`);
-                         updateR2SaveButtonState();
-                         renderR2FileList();
-                         return;
-                    }
-                    // If user chose to overwrite, open it
-                    openR2File(newFilename);
-                    return;
-                }
-                // If file doesn't exist, treat as a new unsaved R2 file
-                editor.setValue(`// 新文件: ${newFilename}\n// 在此编辑并使用 "文件" -> "保存到 R2" 进行保存。`);
-                currentR2Path = newFilename; // Tentatively set path for saving
-                showMessage(`"${newFilename}" 已在编辑器中准备好。编辑后请保存到 R2。`);
-                updateR2SaveButtonState();
-                // Do not add to r2FilesCache yet, only after first save
-                renderR2FileList(); // Update list to remove highlight from previous file
+                if (existingFile) { if(!confirm(`文件 "${newFilename}" 已存在于R2中。要打开并覆盖它吗？ (选择“取消”则仅在编辑器中作为新标签打开)`)){ editor.setValue(`// 新建: ${newFilename}\n`); currentR2Path = null; showMessage(`在编辑器中为 "${newFilename}" 创建了新标签页。记得保存到R2。`); updateR2SaveButtonState(); renderR2FileList(); return; } openR2File(newFilename); return; }
+                editor.setValue(`// 新文件: ${newFilename}\n// 在此编辑并使用 "文件" -> "保存到 R2" 进行保存。`); currentR2Path = newFilename;
+                showMessage(`"${newFilename}" 已在编辑器中准备好。编辑后请保存到 R2。`); updateR2SaveButtonState(); renderR2FileList();
             }
+        }
+        function updateR2SaveButtonState() { /* ... unchanged ... */
+            const btn = document.getElementById('file-save-r2');
+            if (r2SessionActive) { btn.classList.remove('disabled'); btn.disabled = false; btn.title = currentR2Path ? `保存 ${currentR2Path} 到 R2` : "保存当前内容到 R2 (将提示输入文件名)"; }
+            else { btn.classList.add('disabled'); btn.disabled = true; btn.title = "先连接到R2才能保存"; }
+        }
+        function handleFileNew() { /* ... unchanged ... */ editor.setValue(''); currentR2Path = null; updateR2SaveButtonState(); showMessage('新文件已创建'); if (r2SessionActive) renderR2FileList(); closeAllDropdowns(); updateStatus(); }
+        function handleFileOpenLocal(event) { /* ... Use editorLanguages for mapping ... */
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                editor.setValue(e.target.result); currentR2Path = null; showMessage(`本地文件 ${file.name} 已加载`);
+                updateR2SaveButtonState(); if (r2SessionActive) renderR2FileList();
+                const extension = file.name.split('.').pop().toLowerCase(); let langToSet = 'plaintext';
+                for (const lang of editorLanguages) { if (lang.extensions && lang.extensions.includes('.' + extension)) { langToSet = lang.id; break; } }
+                monaco.editor.setModelLanguage(editor.getModel(), langToSet); updateStatus();
+            };
+            reader.readAsText(file); localFileInput.value = '';
+        }
+        function handleFileDownloadLocal() { /* ... unchanged ... */
+            const text = editor.getValue(); const currentLangId = editor.getModel()?.getLanguageId();
+            const langObj = editorLanguages.find(l => l.id === currentLangId);
+            const ext = (langObj && langObj.extensions && langObj.extensions[0]) ? langObj.extensions[0] : '.txt';
+            let filename = `code${ext}`;
+            const userFilename = prompt("请输入要下载的文件名:", currentR2Path || filename); if (!userFilename) { showMessage("下载已取消。"); return; }
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' }); const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob); link.download = userFilename; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            URL.revokeObjectURL(link.href); showMessage(`文件已下载为 ${userFilename}`); closeAllDropdowns();
         }
 
-        function updateR2SaveButtonState() {
-            if (r2SessionActive) {
-                fileSaveR2Button.classList.remove('disabled');
-                fileSaveR2Button.disabled = false;
-                fileSaveR2Button.title = currentR2Path ? `保存 ${currentR2Path} 到 R2` : "保存当前内容到 R2 (将提示输入文件名)";
-            } else {
-                fileSaveR2Button.classList.add('disabled');
-                fileSaveR2Button.disabled = true;
-                fileSaveR2Button.title = "先连接到R2才能保存";
-            }
-        }
 
         function closeAllDropdowns() {
-            document.querySelectorAll('.dropdown-content').forEach(dropdown => {
+            document.querySelectorAll('.dropdown-content, .status-item-dropdown').forEach(dropdown => {
                 dropdown.style.display = 'none';
             });
         }
@@ -751,18 +881,6 @@
             messageBox.timeoutId = setTimeout(() => {
                 messageBox.classList.remove('show');
             }, duration);
-        }
-        function updateStatus() {
-             if (!editor) return;
-             const position = editor.getPosition();
-             if (position) {
-                 statusLineCol.textContent = `Ln ${position.lineNumber}, Col ${position.column}`;
-             }
-             const modelOptions = editor.getModel()?.getOptions();
-             if (modelOptions) {
-                 statusSpaces.textContent = `${modelOptions.insertSpaces ? 'Spaces' : 'Tab Size'}: ${modelOptions.tabSize}`;
-             }
-             currentLanguageStatusElem.textContent = languageSelect.options[languageSelect.selectedIndex]?.text || 'Plain Text';
         }
     </script>
 </body>
